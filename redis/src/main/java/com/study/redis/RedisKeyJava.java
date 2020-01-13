@@ -8,8 +8,8 @@ public class RedisKeyJava {
     public static void main(String[] args) {
 
         //Connecting to Redis server on localhost
-        var jedis = ClientUtil.getClient();
-        System.out.println("Connection to server sucessfully");
+        var jedis = ClientUtil.getJedis();
+        System.out.println("Connection to server successfully");
         //store data in redis list
         // Get the stored data and print it
         Set<String> list = jedis.keys("*");

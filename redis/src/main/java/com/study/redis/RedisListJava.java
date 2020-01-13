@@ -8,7 +8,7 @@ public class RedisListJava {
     public static void main(String[] args) {
 
         //Connecting to Redis server on localhost
-        var jedis = ClientUtil.getClient();
+        var jedis = ClientUtil.getJedis();
         System.out.println("Connection to server sucessfully");
 
         //store data in redis list

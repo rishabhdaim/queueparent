@@ -6,7 +6,7 @@ public final class ClientUtil {
 
     private static final Jedis INSTANCE = new Jedis(PropertiesUtil.getHost());
 
-    public static Jedis getClient() {
+    public static Jedis getJedis() {
         return INSTANCE;
     }
 }

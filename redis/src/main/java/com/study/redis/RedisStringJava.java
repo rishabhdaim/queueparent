@@ -4,7 +4,7 @@ import com.study.redis.util.ClientUtil;
 
 public class RedisStringJava {
     public static void main(String[] args) {
-        var jedis = ClientUtil.getClient();
+        var jedis = ClientUtil.getJedis();
         System.out.println("Connection to server sucessfully");
         //set the data in redis string
         jedis.set("tutorial-name", "Redis tutorial");
