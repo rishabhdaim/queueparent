@@ -1,7 +1,6 @@
 package com.study.redis.vote.jwt;
 
-import com.study.redis.vote.schemas.SignUpForm;
-import com.study.redis.vote.schemas.LoginForm;
+import com.study.redis.vote.schemas.LoginRequest;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -55,9 +54,9 @@ public class JwtTokenUtil implements Serializable {
     }
 
     // generate token for user
-    public String generateToken(LoginForm loginForm) {
+    public String generateToken(LoginRequest loginRequest) {
         Map<String, Object> claims = new HashMap<>();
-        return doGenerateToken(claims, loginForm.getUsernameOrEmail());
+        return doGenerateToken(claims, loginRequest.getUsernameOrEmail());
     }
 
     // while creating the token -

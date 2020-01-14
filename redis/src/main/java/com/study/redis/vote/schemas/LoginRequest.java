@@ -5,7 +5,7 @@ import lombok.Value;
 import lombok.With;
 
 @Value()
-public class LoginForm {
+public class LoginRequest {
     @NonNull @With private final String usernameOrEmail;
     @NonNull private final String password;
 }

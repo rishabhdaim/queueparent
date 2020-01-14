@@ -1,6 +1,6 @@
 package com.study.redis.vote.jwt;
 
-import com.study.redis.constants.RedisConstants;
+import lombok.extern.flogger.Flogger;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.Serializable;
 
+@Flogger
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint, Serializable {
 
     private static final long serialVersionUID = -7858869558953243875L;
@@ -27,10 +28,11 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint, Se
      *
      * @param request       that resulted in an <code>AuthenticationException</code>
      * @param response      so that the user agent can begin authentication
-     * @param authException that caused the invocation
+     * @param e that caused the invocation
      */
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, RedisConstants.UN_AUTHORIZED);
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException e) throws IOException, ServletException {
+        log.atSevere().withCause(e).log("Responding with unauthorized error. Message %s", e.getMessage());
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
     }
 }

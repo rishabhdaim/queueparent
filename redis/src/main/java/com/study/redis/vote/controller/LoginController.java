@@ -30,12 +30,12 @@ public class LoginController {
 
     @PostMapping()
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<JwtToken> loginUser(@RequestBody LoginForm loginForm) {
-        log.atInfo().log("User %s trying to login", loginForm.getUsernameOrEmail());
+    public ResponseEntity<JwtTokenResponse> loginUser(@RequestBody LoginRequest loginRequest) {
+        log.atInfo().log("User %s trying to login", loginRequest.getUsernameOrEmail());
 
-        final Optional<UserProfile> userProfile = VoteUtils.getUserProfile(jedis, loginForm.getUsernameOrEmail());
+        final Optional<UserProfile> userProfile = VoteUtils.getUserProfile(jedis, loginRequest.getUsernameOrEmail());
         final String username = userProfile.orElse(UserProfile.EMPTY).getUsername();
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, loginForm.getPassword()));
-        return ResponseEntity.ok(new JwtToken(jwtTokenUtil.generateToken(loginForm.withUsernameOrEmail(username))));
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, loginRequest.getPassword()));
+        return ResponseEntity.ok(new JwtTokenResponse(jwtTokenUtil.generateToken(loginRequest.withUsernameOrEmail(username))));
     }
 }

@@ -24,7 +24,7 @@ import static com.study.redis.constants.RedisConstants.*;
 @UtilityClass
 public final class VoteUtils {
 
-    public static List<Article> getGroupArticles(final Jedis jedis, final String groupName, final int page, final OrderBy orderBy) {
+    public static List<ArticleDao> getGroupArticles(final Jedis jedis, final String groupName, final int page, final OrderBy orderBy) {
 
         final String groupKey = Keys.toKey(groupName, orderBy::getKey);
 
@@ -41,13 +41,17 @@ public final class VoteUtils {
     public static void addRemoveGroups(final Jedis jedis, final long articleId, final long[] toAdd, final long[] toRemove) {
         final String articleKey = Keys.toKey(articleId, () -> ARTICLE_KEY);
 
+        var pipeline = jedis.pipelined();
         for (long id: toAdd) {
-            jedis.sadd(Keys.toKey(id, () -> GROUP_KEY), articleKey);
+            pipeline.sadd(Keys.toKey(id, () -> GROUP_KEY), articleKey);
         }
+        pipeline.sync();
 
+        pipeline = jedis.pipelined();
         for (long id: toRemove) {
             jedis.srem(Keys.toKey(id, () -> GROUP_KEY), articleKey);
         }
+        pipeline.sync();
     }
 
     public static boolean voteArticle(final Jedis jedis, final User user, final long articleId, final Vote vote) {
@@ -63,10 +67,10 @@ public final class VoteUtils {
         return user;
     }
 
-    public static boolean signUpUser(final Jedis jedis, final SignUpForm signUpForm) {
-        var userProfileKey = Keys.toKey(signUpForm.getUsername(), () -> USER_PROFILE_KEY);
-        var userEmailKey = Keys.toKey(signUpForm.getEmail(), () -> USER_EMAIL_KEY);
-        return signUpUser(al -> al, jedis, userProfileKey, userEmailKey, signUpForm);
+    public static boolean signUpUser(final Jedis jedis, final SignUpRequest signUpRequest) {
+        var userProfileKey = Keys.toKey(signUpRequest.getUsername(), () -> USER_PROFILE_KEY);
+        var userEmailKey = Keys.toKey(signUpRequest.getEmail(), () -> USER_EMAIL_KEY);
+        return signUpUser(al -> al, jedis, userProfileKey, userEmailKey, signUpRequest);
     }
 
     public Optional<UserProfile> getUserProfileByName(final Jedis jedis, final String username) {
@@ -91,42 +95,46 @@ public final class VoteUtils {
         return jedis.sismember(EMAIL_SET, email);
     }
 
-    private static boolean signUpUser(final Predicate<Boolean> predicate, final Jedis jedis, final String userProfileKey, final String userEmailKey, final SignUpForm signUpForm) {
-        if (!predicate.test(checkEmail(jedis, signUpForm.getEmail()) || checkUsername(jedis, signUpForm.getUsername()))) {
+    private static boolean signUpUser(final Predicate<Boolean> predicate, final Jedis jedis, final String userProfileKey, final String userEmailKey, final SignUpRequest signUpRequest) {
+        if (!predicate.test(checkEmail(jedis, signUpRequest.getEmail()) || checkUsername(jedis, signUpRequest.getUsername()))) {
 
-            jedis.sadd(USER_NAME_SET, signUpForm.getUsername());
-            jedis.sadd(EMAIL_SET, signUpForm.getEmail());
+            var pipeline = jedis.pipelined();
 
-            jedis.hmset(userProfileKey, new HashMap<>() {{
-                put(ID_KEY, String.valueOf(signUpForm.getId()));
-                put(USER_NAME_KEY, signUpForm.getUsername());
-                put(EMAIL_KEY, signUpForm.getEmail());
-                put(PASSWORD_KEY, hashPwd(signUpForm.getPassword()));
-                put(FIRST_NAME_KEY, Optional.ofNullable(signUpForm.getFirstName()).orElse(signUpForm.getUsername()));
-                put(LAST_NAME_KEY, Optional.ofNullable(signUpForm.getLastName()).orElse(signUpForm.getUsername()));
+            pipeline.sadd(USER_NAME_SET, signUpRequest.getUsername());
+            pipeline.sadd(EMAIL_SET, signUpRequest.getEmail());
+
+            pipeline.hmset(userProfileKey, new HashMap<>() {{
+                put(ID_KEY, String.valueOf(signUpRequest.getId()));
+                put(USER_NAME_KEY, signUpRequest.getUsername());
+                put(EMAIL_KEY, signUpRequest.getEmail());
+                put(PASSWORD_KEY, hashPwd(signUpRequest.getPassword()));
+                put(FIRST_NAME_KEY, Optional.ofNullable(signUpRequest.getFirstName()).orElse(signUpRequest.getUsername()));
+                put(LAST_NAME_KEY, Optional.ofNullable(signUpRequest.getLastName()).orElse(""));
             }});
 
-            jedis.hmset(userEmailKey, new HashMap<>() {{
-                put(ID_KEY, String.valueOf(signUpForm.getId()));
-                put(USER_NAME_KEY, signUpForm.getUsername());
-                put(EMAIL_KEY, signUpForm.getEmail());
-                put(PASSWORD_KEY, hashPwd(signUpForm.getPassword()));
-                put(FIRST_NAME_KEY, Optional.ofNullable(signUpForm.getFirstName()).orElse(signUpForm.getUsername()));
-                put(LAST_NAME_KEY, Optional.ofNullable(signUpForm.getLastName()).orElse(signUpForm.getUsername()));
+            pipeline.hmset(userEmailKey, new HashMap<>() {{
+                put(ID_KEY, String.valueOf(signUpRequest.getId()));
+                put(USER_NAME_KEY, signUpRequest.getUsername());
+                put(EMAIL_KEY, signUpRequest.getEmail());
+                put(PASSWORD_KEY, hashPwd(signUpRequest.getPassword()));
+                put(FIRST_NAME_KEY, Optional.ofNullable(signUpRequest.getFirstName()).orElse(signUpRequest.getUsername()));
+                put(LAST_NAME_KEY, Optional.ofNullable(signUpRequest.getLastName()).orElse(""));
             }});
-            log.atInfo().log("User Profile for user %s with name %s has been created", signUpForm.getId(), signUpForm.getUsername());
+
+            pipeline.sync();
+            log.atInfo().log("User Profile for user %s with name %s has been created", signUpRequest.getId(), signUpRequest.getUsername());
             return true;
         }
-        log.atWarning().log("User Profile for user %s with name %s already exists", signUpForm.getId(), signUpForm.getUsername());
+        log.atWarning().log("User Profile for user %s with name %s already exists", signUpRequest.getId(), signUpRequest.getUsername());
         return false;
     }
 
-    public static boolean loginUser(final Jedis jedis, final LoginForm loginForm) {
-        var userProfileKey = Keys.toKey(loginForm.getUsernameOrEmail(), () -> USER_PROFILE_KEY);
+    public static boolean loginUser(final Jedis jedis, final LoginRequest loginRequest) {
+        var userProfileKey = Keys.toKey(loginRequest.getUsernameOrEmail(), () -> USER_PROFILE_KEY);
         final var hashPwd = Optional.ofNullable(jedis.hget(userProfileKey, PASSWORD_KEY))
-                .or(() -> Optional.ofNullable(jedis.hget(Keys.toKey(loginForm.getUsernameOrEmail(), () -> USER_EMAIL_KEY), PASSWORD_KEY)));
-        var b = hashPwd.isPresent() && matchPwd(loginForm.getPassword(), hashPwd.get());
-        log.atInfo().log("User %s Logged-in %s", loginForm.getUsernameOrEmail(), b ? lazy(() -> "Successfully"): lazy(() -> "failed"));
+                .or(() -> Optional.ofNullable(jedis.hget(Keys.toKey(loginRequest.getUsernameOrEmail(), () -> USER_EMAIL_KEY), PASSWORD_KEY)));
+        var b = hashPwd.isPresent() && matchPwd(loginRequest.getPassword(), hashPwd.get());
+        log.atInfo().log("User %s Logged-in %s", loginRequest.getUsernameOrEmail(), b ? lazy(() -> "Successfully"): lazy(() -> "failed"));
         return b;
     }
 
@@ -138,31 +146,46 @@ public final class VoteUtils {
         return BCrypt.checkpw(pwd, hashPwd);
     }
 
-    public static long postArticle(final Jedis jedis, final User user, final ArticleData articleData) {
+    public static boolean resetPassword(final Jedis jedis, final String email) {
+        if (checkEmail(jedis, email)) {
+            sentEmail(email);
+        }
+        return true;
+    }
+
+    private static boolean sentEmail(String email) {
+    return true;
+    }
+
+    public static long postArticle(final Jedis jedis, final User user, final Article article) {
 
         var articleId = jedis.incr(ARTICLE_KEY);
 
         var articleKey = Keys.toKey(articleId, () -> ARTICLE_KEY);
         var votedKey = Keys.toKey(articleId, () -> VOTED_KEY);
 
+        var pipeline = jedis.pipelined();
+
         // create voted set for new article
-        jedis.sadd(votedKey, user.toKey());
-        jedis.expire(votedKey, ONE_WEEK_IN_SECONDS);
+        pipeline.sadd(votedKey, user.toKey());
+        pipeline.expire(votedKey, ONE_WEEK_IN_SECONDS);
 
         var now = Instant.now().getEpochSecond();
         final var score = Vote.UP_VOTE.score(VOTE_SCORE);
 
-        jedis.hmset(articleKey, new HashMap<>() {{
-            put(TITLE_KEY, articleData.getTitle());
-            put(LINK_KEY, articleData.getLink());
+        pipeline.hmset(articleKey, new HashMap<>() {{
+            put(TITLE_KEY, article.getTitle());
+            put(LINK_KEY, article.getLink());
             put(POSTER_KEY, user.toKey());
             put(TIME_KEY, String.valueOf(now));
             put(VOTES_KEY, String.valueOf(1));
             put(SCORES_KEY, String.valueOf(now + score));
         }});
 
-        var scoreSet = jedis.zadd(SCORE_SET, now + score, articleKey);
-        var timeSet = jedis.zadd(TIME_SET, now, articleKey);
+        var scoreSet = pipeline.zadd(SCORE_SET, now + score, articleKey);
+        var timeSet = pipeline.zadd(TIME_SET, now, articleKey);
+
+        pipeline.sync();
 
         log.atInfo().log("Article %s posted by user %s. Score set %s, Time Set %s", articleKey, user.toKey(), scoreSet, timeSet);
 
@@ -176,10 +199,12 @@ public final class VoteUtils {
 
         // delete article from Map if posted by same User
         if (Objects.equals(jedis.hget(articleKey, POSTER_KEY), user.toKey())) {
-            jedis.hdel(articleKey, TITLE_KEY, LINK_KEY, POSTER_KEY, TIME_KEY, VOTES_KEY, SCORES_KEY);
-            jedis.srem(votedKey, user.toKey());
-            jedis.zrem(SCORE_SET, articleKey);
-            jedis.zrem(TIME_SET, articleKey);
+            var pipeline = jedis.pipelined();
+            pipeline.hdel(articleKey, TITLE_KEY, LINK_KEY, POSTER_KEY, TIME_KEY, VOTES_KEY, SCORES_KEY);
+            pipeline.srem(votedKey, user.toKey());
+            pipeline.zrem(SCORE_SET, articleKey);
+            pipeline.zrem(TIME_SET, articleKey);
+            pipeline.sync();
             log.atInfo().log("Article %s posted by user %s has been deleted", articleKey, user.toKey());
             return true;
         }
@@ -187,17 +212,17 @@ public final class VoteUtils {
         return false;
     }
 
-    public static List<Article> getArticles(final Jedis jedis, final int page, final OrderBy orderBy) {
+    public static List<ArticleDao> getArticles(final Jedis jedis, final int page, final OrderBy orderBy) {
         Preconditions.checkArgument(page > 0);
         var start = (page - 1) * ARTICLES_PER_PAGE;
         var end = start + ARTICLES_PER_PAGE - 1;
         var ids = jedis.zrevrange(orderBy.getKey(), start, end);
-        return ids.stream().map(id -> Article.ofMap(id, jedis.hgetAll(id))).collect(Collectors.toUnmodifiableList());
+        return ids.stream().map(id -> ArticleDao.ofMap(id, jedis.hgetAll(id))).collect(Collectors.toUnmodifiableList());
     }
 
-    public static Article getArticle(final Jedis jedis, final long articleId) {
+    public static ArticleDao getArticle(final Jedis jedis, final long articleId) {
         var articleKey = Keys.toKey(articleId, () -> ARTICLE_KEY);
-        return Article.ofMap(articleKey, jedis.hgetAll(articleKey));
+        return ArticleDao.ofMap(articleKey, jedis.hgetAll(articleKey));
     }
 
     /**
@@ -205,16 +230,18 @@ public final class VoteUtils {
      *
      * @param predicate check whether users has already voted or not
      * @param jedis {@link Jedis client}
-     * @param articleId {@link Article to vote}
+     * @param articleId {@link ArticleDao to vote}
      * @param user {@link User voting user}
      */
     private static boolean voteArticle(final Predicate<Long> predicate, final Jedis jedis, final long articleId, final User user, final Vote vote) {
         if (predicate.test(jedis.sadd(vote.toKey(articleId), user.toKey()))) {
+            var pipeline = jedis.pipelined();
             var articleKey = Keys.toKey(articleId, () -> ARTICLE_KEY);
-            jedis.zincrby(SCORE_SET, vote.score(VOTE_SCORE), articleKey);
-            jedis.hincrBy(articleKey, VOTES_KEY, 1);
-            jedis.hincrBy(articleKey, SCORES_KEY, vote.score(VOTE_SCORE));
+            pipeline.zincrby(SCORE_SET, vote.score(VOTE_SCORE), articleKey);
+            pipeline.hincrBy(articleKey, VOTES_KEY, 1);
+            pipeline.hincrBy(articleKey, SCORES_KEY, vote.score(VOTE_SCORE));
             log.atInfo().log("Article %s voted by user %s", articleKey, user.toKey());
+            pipeline.sync();
             return true;
         }
         log.atWarning().log("Voting skipped for Article %s from user %s because of already voted", articleId, user.toKey());

@@ -1,7 +1,7 @@
 package com.study.redis.vote.main;
 
 import com.study.redis.constants.RedisConstants;
-import com.study.redis.vote.schemas.ArticleData;
+import com.study.redis.vote.schemas.Article;
 import com.study.redis.vote.schemas.User;
 import com.study.redis.vote.schemas.Vote;
 
@@ -17,7 +17,7 @@ public class VoteApp {
         System.out.println(jedis.ping());
 
         final var user = User.of(jedis.incr(RedisConstants.USER_KEY));
-        final var articleData = new ArticleData("Go to Statement is bad", "https://www.google.com");
+        final var articleData = new Article(user.getId(),"Go to Statement is bad", "https://www.google.com");
 
         final var articleId = postArticle(jedis, user, articleData);
         System.out.println(articleId);

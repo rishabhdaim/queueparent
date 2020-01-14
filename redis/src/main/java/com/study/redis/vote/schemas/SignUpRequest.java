@@ -9,10 +9,10 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.Size;
 
 @Value()
-public class SignUpForm {
+public class SignUpRequest {
     @NonNull @Min(1) private final long id;
-    @NonNull @NotEmpty(message = "Please provide username")private final String username;
-    @NonNull @Email @NotEmpty(message = "Please provide email")private final String email;
+    @NonNull @NotEmpty(message = "Please provide username") @Size(min = 4, max = 16) private final String username;
+    @NonNull @Email @NotEmpty(message = "Please provide email") @Size(max = 64) private final String email;
     @NonNull @Size(min = 8, max = 20) @NotEmpty(message = "Please provide password")private final String password;
     private final String firstName;
     private final String lastName;

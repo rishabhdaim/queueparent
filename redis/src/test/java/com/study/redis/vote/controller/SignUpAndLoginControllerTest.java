@@ -1,14 +1,14 @@
 package com.study.redis.vote.controller;
 
-import com.study.redis.vote.beans.RedisBean;
+import com.study.redis.vote.beans.RedisConfiguration;
 import com.study.redis.vote.exception.LoginExceptionController;
 import com.study.redis.vote.jwt.JwtAuthenticationEntryPoint;
 import com.study.redis.vote.jwt.JwtRequestFilter;
 import com.study.redis.vote.jwt.JwtTokenUtil;
 import com.study.redis.vote.jwt.JwtUserDetailsService;
-import com.study.redis.vote.schemas.JwtToken;
-import com.study.redis.vote.schemas.LoginForm;
-import com.study.redis.vote.schemas.SignUpForm;
+import com.study.redis.vote.schemas.JwtTokenResponse;
+import com.study.redis.vote.schemas.LoginRequest;
+import com.study.redis.vote.schemas.SignUpRequest;
 import com.study.redis.vote.security.WebSecurityConfig;
 import org.junit.After;
 import org.junit.Before;
@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 
 @WebAppConfiguration
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = { SignUpController.class, LoginController.class, RedisBean.class, WebSecurityConfig.class,
+@ContextConfiguration(classes = { SignUpController.class, LoginController.class, RedisConfiguration.class, WebSecurityConfig.class,
         JwtAuthenticationEntryPoint.class, JwtRequestFilter.class, JwtUserDetailsService.class, JwtTokenUtil.class, LoginExceptionController.class})
 public class SignUpAndLoginControllerTest {
 
@@ -46,50 +46,50 @@ public class SignUpAndLoginControllerTest {
     private final String password = "password";
     @Test
     public void validateSignUpPositive() {
-        SignUpForm signUpForm = new SignUpForm(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
-        var entity = signUpController.signUpUser(signUpForm);
+        SignUpRequest signUpRequest = new SignUpRequest(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
+        var entity = signUpController.signUpUser(signUpRequest);
         assertEquals(entity.getStatusCode(), HttpStatus.OK);
 
-        LoginForm loginForm = new LoginForm("daim", password);
-        entity = loginController.loginUser(loginForm);
+        LoginRequest loginRequest = new LoginRequest("daim", password);
+        entity = loginController.loginUser(loginRequest);
         assertEquals(entity.getStatusCode(), HttpStatus.OK);
-        assertTrue(entity.getBody() instanceof JwtToken);
-        assertEquals(jwtTokenUtil.getUsernameFromToken(((JwtToken)entity.getBody()).getToken()), "daim");
+        assertTrue(entity.getBody() instanceof JwtTokenResponse);
+        assertEquals(jwtTokenUtil.getUsernameFromToken(((JwtTokenResponse)entity.getBody()).getToken()), "daim");
 
-        loginForm = new LoginForm("rishabhdaim1991@gmail.com", password);
-        entity = loginController.loginUser(loginForm);
+        loginRequest = new LoginRequest("rishabhdaim1991@gmail.com", password);
+        entity = loginController.loginUser(loginRequest);
         assertEquals(entity.getStatusCode(), HttpStatus.OK);
-        assertTrue(entity.getBody() instanceof JwtToken);
-        assertEquals(jwtTokenUtil.getUsernameFromToken(((JwtToken)entity.getBody()).getToken()), "daim");
+        assertTrue(entity.getBody() instanceof JwtTokenResponse);
+        assertEquals(jwtTokenUtil.getUsernameFromToken(((JwtTokenResponse)entity.getBody()).getToken()), "daim");
     }
 
     @Test(expected = BadCredentialsException.class)
     public void validateSignUpWrongUserName() {
-        SignUpForm signUpForm = new SignUpForm(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
-        var entity = signUpController.signUpUser(signUpForm);
+        SignUpRequest signUpRequest = new SignUpRequest(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
+        var entity = signUpController.signUpUser(signUpRequest);
         assertEquals(entity.getStatusCode(), HttpStatus.OK);
 
-        var loginForm = new LoginForm("daim1", password);
+        var loginForm = new LoginRequest("daim1", password);
         loginController.loginUser(loginForm);
     }
 
     @Test(expected = BadCredentialsException.class)
     public void validateSignUpWrongUserEmail() {
-        SignUpForm signUpForm = new SignUpForm(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
-        var entity = signUpController.signUpUser(signUpForm);
+        SignUpRequest signUpRequest = new SignUpRequest(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
+        var entity = signUpController.signUpUser(signUpRequest);
         assertEquals(entity.getStatusCode(), HttpStatus.OK);
 
-        var loginForm = new LoginForm("rishabhdaim1991@gmail.comm", password);
+        var loginForm = new LoginRequest("rishabhdaim1991@gmail.comm", password);
         loginController.loginUser(loginForm);
     }
 
     @Test(expected = BadCredentialsException.class)
     public void validateSignUpWrongPassword() {
-        SignUpForm signUpForm = new SignUpForm(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
-        var entity = signUpController.signUpUser(signUpForm);
+        SignUpRequest signUpRequest = new SignUpRequest(1, "daim", "rishabhdaim1991@gmail.com", password, "", "");
+        var entity = signUpController.signUpUser(signUpRequest);
         assertEquals(entity.getStatusCode(), HttpStatus.OK);
 
-        var loginForm = new LoginForm("daim", "password1");
+        var loginForm = new LoginRequest("daim", "password1");
         loginController.loginUser(loginForm);
     }
 
