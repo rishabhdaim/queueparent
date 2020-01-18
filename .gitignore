@@ -2,3 +2,5 @@ target/
 *.idea/
 *.setings/
 redis/target/
+parent.iml
+redis/redis.iml
