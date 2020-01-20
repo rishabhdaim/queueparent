@@ -1,15 +1,12 @@
-package com.study.redis.vote.security;
+package com.open.poker.security;
 
-import com.study.redis.vote.jwt.JwtAuthenticationEntryPoint;
-import com.study.redis.vote.jwt.JwtRequestFilter;
-import com.study.redis.vote.jwt.JwtUserDetailsService;
+import com.open.poker.dao.UserDetailsServiceImpl;
+import com.open.poker.filter.JwtRequestFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.BeanIds;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -18,28 +15,22 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-@Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(
-        securedEnabled = true,
-        jsr250Enabled = true,
-        prePostEnabled = true
-)
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private JwtRequestFilter jwtRequestFilter;
 
     @Autowired
-    private JwtUserDetailsService jwtUserDetailsService;
+    private UserDetailsServiceImpl userDetailsService;
 
 
     @Autowired
-    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private AuthenticationEntryPointImpl authenticationEntryPoint;
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(jwtUserDetailsService).passwordEncoder(passwordEncoder());
+        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
     }
 
     @Bean(BeanIds.AUTHENTICATION_MANAGER)
@@ -55,47 +46,38 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Bean
-    public JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
-        return new JwtAuthenticationEntryPoint();
+    public AuthenticationEntryPointImpl jwtAuthenticationEntryPoint() {
+        return new AuthenticationEntryPointImpl();
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-            .cors()
-                .and()
-            .csrf()
-                .disable()
-            .authorizeRequests()
+                .cors().disable()
+                .csrf().disable()
+                .authorizeRequests()
                 .antMatchers("/",
-                    "/**/*.ico",
-                    "/**/*.png",
-                    "/**/*.gif",
-                    "/**/*.svg",
-                    "/**/*.jpg",
-                    "/**/*.html",
-                    "/**/*.css",
-                    "/**/*.js",
-                    "/v2/api-docs")
-                    .permitAll()
-                .antMatchers("/signup", "/login")
-                    .permitAll()
-                .antMatchers("/check/**")
-                    .permitAll()
-                .antMatchers("/swagger**")
-                    .permitAll()
-                .antMatchers("/articles")
-                    .permitAll()
+                        "/**/*.ico",
+                        "/**/*.png",
+                        "/**/*.gif",
+                        "/**/*.svg",
+                        "/**/*.jpg",
+                        "/**/*.html",
+                        "/**/*.css",
+                        "/**/*.js")
+                .permitAll()
+                .antMatchers("/signup", "/login", "/authenticate", "/check")
+                .permitAll()
                 .anyRequest()
-                    .authenticated()
-            .and()
+                .authenticated()
+                .and()
                 .exceptionHandling()
-                    .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-            .and()
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .and()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+                .and()
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
-//                .and().httpBasic(Customizer.withDefaults()) // used only for http basic authentication
-            .formLogin().disable();
+                .formLogin().disable();
     }
 }
+
