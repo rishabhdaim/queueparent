@@ -1,8 +1,8 @@
 package com.study.redis.vote.controller;
 
 import com.study.redis.vote.VoteUtils;
-import com.study.redis.vote.schemas.ArticleDao;
 import com.study.redis.vote.schemas.Article;
+import com.study.redis.vote.schemas.ArticleDao;
 import com.study.redis.vote.schemas.OrderBy;
 import com.study.redis.vote.schemas.User;
 import lombok.extern.flogger.Flogger;
@@ -14,12 +14,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import redis.clients.jedis.Jedis;
 
 import javax.validation.Valid;
-import java.net.URI;
 import java.util.List;
 
 @RestController
 @Flogger
-@RequestMapping(path = "/article")
+@RequestMapping(path = "/articles")
 public class ArticleController {
 
     @Autowired

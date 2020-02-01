@@ -4,7 +4,6 @@ import lombok.extern.flogger.Flogger;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -31,7 +30,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint, Se
      * @param e that caused the invocation
      */
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException e) throws IOException, ServletException {
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException e) throws IOException {
         log.atSevere().withCause(e).log("Responding with unauthorized error. Message %s", e.getMessage());
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
     }

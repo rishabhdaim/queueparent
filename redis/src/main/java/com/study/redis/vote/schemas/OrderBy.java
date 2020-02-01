@@ -1,18 +1,21 @@
 package com.study.redis.vote.schemas;
 
-import com.study.redis.constants.RedisConstants;
+import static com.study.redis.constants.RedisConstants.*;
 
 public enum OrderBy {
 
-    TIME(RedisConstants.TIME_SET), SCORE(RedisConstants.SCORE_SET);
+    TIME(TIME_KEY, TIME_SET), SCORE(SCORES_KEY, SCORE_SET);
 
     private final String name;
-    OrderBy(final String name) {
+    private final String key;
+
+    OrderBy(final String name, String key) {
         this.name = name;
+        this.key = key;
     }
 
     public String getKey() {
-        return name;
+        return key;
     }
 
     @Override
